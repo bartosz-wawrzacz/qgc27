@@ -173,6 +173,7 @@ Rectangle {
         visible:        false
         property var linkConfig: null
         property var editConfig: null
+        property var satcomS: null
     }
 
     //---------------------------------------------
@@ -186,6 +187,7 @@ Rectangle {
                 // If editing, create copy for editing
                 if(linkConfig) {
                     editConfig = QGroundControl.linkManager.startConfigurationEditing(linkConfig)
+                    satcomS = editConfig.satcomSettings
                 } else {
                     // Create new link configuration
                     if(ScreenTools.isiOS)
@@ -314,6 +316,37 @@ Rectangle {
                         Component.onCompleted: {
                             if(editConfig)
                                 checked = editConfig.autoConnect
+                        }
+                    }
+                    //-- Satellite communication link
+                    QGCCheckBox {
+                        id:         satcomCheckBox
+                        text:       "Satellite communication link"
+                        checked:    false
+                        enabled:    true
+                        onCheckedChanged: {
+                            if(editConfig) {
+                                satcomS.usingSatcom = checked
+                            }
+                        }
+                        Component.onCompleted: {
+                            if(editConfig)
+                                checked = satcomS.usingSatcom
+                        }
+                    }
+                    Row {
+                        spacing:    ScreenTools.defaultFontPixelWidth
+                        visible:    satcomCheckBox.checked
+                        QGCLabel {
+                            text:   "Twoja stara to:"
+                            width:  _firstColumn
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        QGCTextField {
+                            id:     linkVehicleId
+                            text:   "penis węża"
+                            width:  _secondColumn
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
                     Item {

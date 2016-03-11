@@ -52,6 +52,7 @@ MAVLinkProtocol::MAVLinkProtocol(QGCApplication* app)
     , m_paramGuardEnabled(true)
     , m_actionGuardEnabled(false)
     , m_actionRetransmissionTimeout(100)
+    , m_simpleWaypointProtocolEnabled(false)
     , versionMismatchIgnore(false)
     , systemId(QGC::defaultSystemId)
 #ifndef __mobile__
@@ -135,6 +136,7 @@ void MAVLinkProtocol::loadSettings()
     temp = settings.value("PARAMETER_REWRITE_TIMEOUT", m_paramRewriteTimeout).toInt(&ok);
     if (ok) m_paramRewriteTimeout = temp;
     m_paramGuardEnabled = settings.value("PARAMETER_TRANSMISSION_GUARD_ENABLED", m_paramGuardEnabled).toBool();
+    m_simpleWaypointProtocolEnabled = settings.value("SIMPLE_WAYPOINT_PROTOCOL_ENABLED", m_actionGuardEnabled).toBool();
     settings.endGroup();
 }
 
@@ -149,6 +151,7 @@ void MAVLinkProtocol::storeSettings()
     settings.setValue("GCS_AUTH_KEY", m_authKey);
     settings.setValue("GCS_AUTH_ENABLED", m_authEnabled);
     // Parameter interface settings
+    settings.setValue("SIMPLE_WAYPOINT_PROTOCOL_ENABLED", m_simpleWaypointProtocolEnabled);
     settings.setValue("PARAMETER_RETRANSMISSION_TIMEOUT", m_paramRetransmissionTimeout);
     settings.setValue("PARAMETER_REWRITE_TIMEOUT", m_paramRewriteTimeout);
     settings.setValue("PARAMETER_TRANSMISSION_GUARD_ENABLED", m_paramGuardEnabled);
@@ -521,6 +524,14 @@ void MAVLinkProtocol::setActionRetransmissionTimeout(int ms)
     if (ms != m_actionRetransmissionTimeout) {
         m_actionRetransmissionTimeout = ms;
         emit actionRetransmissionTimeoutChanged(m_actionRetransmissionTimeout);
+    }
+}
+
+void MAVLinkProtocol::enableSimpleWaypointProtocol(bool enabled)
+{
+    if (enabled != m_simpleWaypointProtocolEnabled) {
+        m_simpleWaypointProtocolEnabled = enabled;
+        emit simpleWaypointProtocolChanged(enabled);
     }
 }
 

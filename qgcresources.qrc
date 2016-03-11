@@ -1,8 +1,6 @@
 <RCC>
     <qresource prefix="/qmlimages">
         <file alias="AirframeComponentIcon.png">src/AutoPilotPlugins/Common/Images/AirframeComponentIcon.png</file>
-
-        <!-- These are here for back compat with previous airframe meta data -->
         <file alias="AirframeFlyingWing.png">src/AutoPilotPlugins/Common/Images/FlyingWing.svg</file>
         <file alias="AirframeHexaRotorPlus.png">src/AutoPilotPlugins/Common/Images/HexaRotorPlus.svg</file>
         <file alias="AirframeHexaRotorX.png">src/AutoPilotPlugins/Common/Images/HexaRotorX.svg</file>
@@ -13,8 +11,6 @@
         <file alias="AirframeQuadRotorX.png">src/AutoPilotPlugins/Common/Images/QuadRotorX.svg</file>
         <file alias="AirframeSimulation.png">src/AutoPilotPlugins/Common/Images/AirframeSimulation.svg</file>
         <file alias="AirframeStandardPlane.png">src/AutoPilotPlugins/Common/Images/Plane.svg</file>
-
-        <!-- Aiframe images supported by airfame meta data ml image tag -->
         <file alias="Airframe/AirframeSimulation">src/AutoPilotPlugins/Common/Images/AirframeSimulation.svg</file>
         <file alias="Airframe/AirframeUnknown">src/AutoPilotPlugins/Common/Images/AirframeUnknown.svg</file>
         <file alias="Airframe/Boat">src/AutoPilotPlugins/Common/Images/Boat.svg</file>
@@ -130,6 +126,7 @@
         <file alias="TelemRSSI.svg">src/ui/toolbar/Images/TelemRSSI.svg</file>
         <file alias="Yield.svg">src/ui/toolbar/Images/Yield.svg</file>
         <file alias="CogWheel.svg">src/MissionManager/CogWheel.svg</file>
+        <file alias="SatPlane.svg">src/ui/toolbar/Images/SatPlane.svg</file>
     </qresource>
     <qresource prefix="/res">
         <file alias="AntennaRC">resources/Antenna_RC.svg</file>

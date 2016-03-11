@@ -201,6 +201,7 @@ public:
     Q_PROPERTY(bool                 fixedWing               READ fixedWing                              CONSTANT)
     Q_PROPERTY(bool                 multiRotor              READ multiRotor                             CONSTANT)
     Q_PROPERTY(bool                 autoDisconnect          MEMBER _autoDisconnect                      NOTIFY autoDisconnectChanged)
+    Q_PROPERTY(bool                 usingSatcomLink         READ usingSatcomLink        WRITE setUsingSatcomLink NOTIFY usingSatcomLinkChanged)
 
     // FactGroup object model properties
 
@@ -352,6 +353,7 @@ public:
     uint            messagesReceived    () { return _messagesReceived; }
     uint            messagesSent        () { return _messagesSent; }
     uint            messagesLost        () { return _messagesLost; }
+    bool            usingSatcomLink     () const { return _usingSatcomLink; }
 
     Fact* roll              (void) { return &_rollFact; }
     Fact* heading           (void) { return &_headingFact; }
@@ -366,6 +368,7 @@ public:
     FactGroup* batteryFactGroup (void) { return &_batteryFactGroup; }
 
     void setConnectionLostEnabled(bool connectionLostEnabled);
+    void setUsingSatcomLink(bool usingSatcomLink);
 
     ParameterLoader* getParameterLoader(void);
 
@@ -394,6 +397,7 @@ signals:
     void connectionLostChanged(bool connectionLost);
     void connectionLostEnabledChanged(bool connectionLostEnabled);
     void autoDisconnectChanged(bool autoDisconnectChanged);
+    void usingSatcomLinkChanged(bool usingSatcomLink);
 
     void messagesReceivedChanged    ();
     void messagesSentChanged        ();
@@ -520,6 +524,8 @@ private:
     bool                _connectionLostEnabled;
     static const int    _connectionLostTimeoutMSecs = 3500;  // Signal connection lost after 3.5 seconds of missed heartbeat
     QTimer              _connectionLostTimer;
+
+    bool                _usingSatcomLink;
 
     MissionManager*     _missionManager;
     bool                _missionManagerInitialRequestComplete;

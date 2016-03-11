@@ -32,7 +32,7 @@
 
 QGC_LOGGING_CATEGORY(MissionManagerLog, "MissionManagerLog")
 
-MissionManager::MissionManager(Vehicle* vehicle)
+MissionManager::MissionManager(Vehicle* vehicle, bool useSimpleWaypointProtocol)
     : _vehicle(vehicle)
     , _dedicatedLink(NULL)
     , _ackTimeoutTimer(NULL)
@@ -40,14 +40,24 @@ MissionManager::MissionManager(Vehicle* vehicle)
     , _readTransactionInProgress(false)
     , _writeTransactionInProgress(false)
     , _currentMissionItem(-1)
+    , _simpleWaypointProtocolEnabled(useSimpleWaypointProtocol)
 {
     connect(_vehicle, &Vehicle::mavlinkMessageReceived, this, &MissionManager::_mavlinkMessageReceived);
     
     _ackTimeoutTimer = new QTimer(this);
     _ackTimeoutTimer->setSingleShot(true);
     _ackTimeoutTimer->setInterval(_ackTimeoutMilliseconds);
-    
+
     connect(_ackTimeoutTimer, &QTimer::timeout, this, &MissionManager::_ackTimeout);
+
+    _simpleProtocolSendTimer = new QTimer(this);
+    _simpleProtocolSendTimer->setSingleShot(false);
+    _simpleProtocolSendTimer->setInterval(_simpleProtocolSendIntervalMs);
+
+    connect(_simpleProtocolSendTimer, &QTimer::timeout, this, &MissionManager::_simpleProtocolSendCallback);
+
+    qDebug(">>>>>>>>> MISSION MANAGER - SIMPLE PROT %d", _simpleWaypointProtocolEnabled);
+    qDebug(">>>>>>>>> timeout %d", _ackTimeoutMilliseconds);
 }
 
 MissionManager::~MissionManager()
@@ -102,8 +112,13 @@ void MissionManager::writeMissionItems(const QmlObjectListModel& missionItems)
 
     _dedicatedLink = _vehicle->priorityLink();
     _vehicle->sendMessageOnLink(_dedicatedLink, message);
-    _startAckTimeout(AckMissionRequest);
     emit inProgressChanged(true);
+
+    if(_simpleWaypointProtocolEnabled && _missionItems.count() != 0) {
+        _simpleProtocolSendTimer->start();
+    } else {
+        _startAckTimeout(AckMissionRequest);
+    }
 }
 
 void MissionManager::requestMissionItems(void)
@@ -114,7 +129,6 @@ void MissionManager::requestMissionItems(void)
     mavlink_mission_request_list_t  request;
     
     _requestItemRetryCount = 0;
-    _itemIndicesToRead.clear();
     _readTransactionInProgress = true;
     _clearMissionItems();
     
@@ -127,6 +141,40 @@ void MissionManager::requestMissionItems(void)
     _vehicle->sendMessageOnLink(_dedicatedLink, message);
     _startAckTimeout(AckMissionCount);
     emit inProgressChanged(true);
+}
+
+void MissionManager::_simpleProtocolSendCallback(void)
+{
+    int seq = _itemIndicesToWrite.takeFirst();
+
+    mavlink_message_t       messageOut;
+    mavlink_mission_item_t  missionItem;
+
+    MissionItem* item = (MissionItem*)_missionItems[seq];
+
+    missionItem.target_system =     _vehicle->id();
+    missionItem.target_component =  MAV_COMP_ID_MISSIONPLANNER;
+    missionItem.seq =               seq;
+    missionItem.command =           item->command();
+    missionItem.x =                 item->coordinate().latitude();
+    missionItem.y =                 item->coordinate().longitude();
+    missionItem.z =                 item->coordinate().altitude();
+    missionItem.param1 =            item->param1();
+    missionItem.param2 =            item->param2();
+    missionItem.param3 =            item->param3();
+    missionItem.param4 =            item->param4();
+    missionItem.frame =             item->frame();
+    missionItem.current =           seq == 0;
+    missionItem.autocontinue =      item->autoContinue();
+
+    mavlink_msg_mission_item_encode(qgcApp()->toolbox()->mavlinkProtocol()->getSystemId(), qgcApp()->toolbox()->mavlinkProtocol()->getComponentId(), &messageOut, &missionItem);
+
+    _vehicle->sendMessageOnLink(_dedicatedLink, messageOut);
+
+    if (_itemIndicesToWrite.count() == 0) {
+        _simpleProtocolSendTimer->stop();
+        _startAckTimeout(AckMissionRequest);
+    }
 }
 
 void MissionManager::_ackTimeout(void)
@@ -184,7 +232,8 @@ void MissionManager::_readTransactionComplete(void)
     
     mavlink_msg_mission_ack_encode(qgcApp()->toolbox()->mavlinkProtocol()->getSystemId(), qgcApp()->toolbox()->mavlinkProtocol()->getComponentId(), &message, &missionAck);
     
-    _vehicle->sendMessageOnLink(_dedicatedLink, message);
+    if(!_simpleWaypointProtocolEnabled)
+        _vehicle->sendMessageOnLink(_dedicatedLink, message);
 
     _finishTransaction(true);
     emit newMissionItemsAvailable();
@@ -208,7 +257,12 @@ void MissionManager::_handleMissionCount(const mavlink_message_t& message)
         for (int i=0; i<missionCount.count; i++) {
             _itemIndicesToRead << i;
         }
-        _requestNextMissionItem();
+        if (_simpleWaypointProtocolEnabled) {
+            // simply wait for the incoming mission items
+            _startAckTimeout(AckMissionItem);
+        } else {
+            _requestNextMissionItem();
+        }
     }
 
     
@@ -273,6 +327,7 @@ void MissionManager::_handleMissionItem(const mavlink_message_t& message)
         }
 
         _missionItems.append(item);
+        qDebug(">>>>>> ITEM seq %d", missionItem.seq);
     } else {
         qCDebug(MissionManagerLog) << "_handleMissionItem mission item received item index which was not requested, disregrarding:" << missionItem.seq;
         if (++_requestItemRetryCount > _maxRetryCount) {
@@ -285,7 +340,12 @@ void MissionManager::_handleMissionItem(const mavlink_message_t& message)
     if (_itemIndicesToRead.count() == 0) {
         _readTransactionComplete();
     } else {
-        _requestNextMissionItem();
+        if (_simpleWaypointProtocolEnabled) {
+            // simply wait for the incoming mission items
+            _startAckTimeout(AckMissionItem);
+        } else {
+            _requestNextMissionItem();
+        }
     }
 }
 

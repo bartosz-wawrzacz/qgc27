@@ -116,6 +116,7 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _autoDisconnect(false)
     , _connectionLost(false)
     , _connectionLostEnabled(true)
+    , _usingSatcomLink(false)
     , _missionManager(NULL)
     , _missionManagerInitialRequestComplete(false)
     , _parameterLoader(NULL)
@@ -197,7 +198,7 @@ Vehicle::Vehicle(LinkInterface*             link,
 
     _loadSettings();
 
-    _missionManager = new MissionManager(this);
+    _missionManager = new MissionManager(this, _mavlink->isSimpleWaypointProtocolEnabled());
     connect(_missionManager, &MissionManager::error, this, &Vehicle::_missionManagerError);
 
     _parameterLoader = new ParameterLoader(_autopilotPlugin, this /* Vehicle */, this /* parent */);
@@ -323,6 +324,9 @@ void Vehicle::_mavlinkMessageReceived(LinkInterface* link, mavlink_message_t mes
         break;
     case MAVLINK_MSG_ID_SCALED_IMU3:
         emit mavlinkScaledImu3(message);
+        break;
+    case MAVLINK_MSG_ID_SATCOM_HEARTBEAT:
+        qDebug() << "SATCOM HB!";
         break;
     }
 
@@ -598,7 +602,10 @@ void Vehicle::_sendMessage(mavlink_message_t message)
     // Emit message on all links that are currently connected
     foreach (LinkInterface* link, _links) {
         if (link->isConnected()) {
-            _sendMessageOnLink(link, message);
+            // Never send the heartbeat on a high-latency link
+            if(!(message.msgid == MAVLINK_MSG_ID_HEARTBEAT && link->getLinkConfiguration()->satcomSettings()->satcomUsed())) {
+                _sendMessageOnLink(link, message);
+            }
         }
     }
 }
@@ -606,9 +613,11 @@ void Vehicle::_sendMessage(mavlink_message_t message)
 /// @return Direct usb connection link to board if one, NULL if none
 LinkInterface* Vehicle::priorityLink(void)
 {
+    LinkInterface* lowLatencyLink = NULL;
 #ifndef __ios__
     foreach (LinkInterface* link, _links) {
         if (link->isConnected()) {
+            qDebug() << link->getName() << " " << link->active();
             SerialLink* pSerialLink = qobject_cast<SerialLink*>(link);
             if (pSerialLink) {
                 LinkConfiguration* pLinkConfig = pSerialLink->getLinkConfiguration();
@@ -617,11 +626,18 @@ LinkInterface* Vehicle::priorityLink(void)
                     if (pSerialConfig && pSerialConfig->usbDirect()) {
                         return link;
                     }
+                    if (lowLatencyLink == NULL && !pLinkConfig->satcomSettings()->satcomUsed()) {
+                        lowLatencyLink = link;
+                    }
                 }
             }
         }
     }
 #endif
+    // return the first low-latency link available
+    if (lowLatencyLink != NULL) {
+        return lowLatencyLink;
+    }
     return _links.count() ? _links[0] : NULL;
 }
 
@@ -1153,6 +1169,14 @@ void Vehicle::virtualTabletJoystickValue(double roll, double pitch, double yaw, 
     // The following if statement prevents the virtualTabletJoystick from sending values if the standard joystick is enabled
     if ( !_joystickEnabled ) {
         _uas->setExternalControlSetpoint(roll, pitch, yaw, thrust, 0, JoystickModeRC);
+    }
+}
+
+void Vehicle::setUsingSatcomLink(bool usingSatcomLink)
+{
+    if(_usingSatcomLink != usingSatcomLink) {
+        _usingSatcomLink = usingSatcomLink;
+        emit usingSatcomLinkChanged(_usingSatcomLink);
     }
 }
 

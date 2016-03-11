@@ -64,6 +64,8 @@ MAVLinkSettingsWidget::MAVLinkSettingsWidget(MAVLinkProtocol* protocol, QWidget 
     m_ui->actionGuardCheckBox->setChecked(protocol->actionGuardEnabled());
     m_ui->actionRetransmissionSpinBox->setValue(protocol->getActionRetransmissionTimeout());
 
+    m_ui->simpleWaypointCheckBox->setChecked(protocol->isSimpleWaypointProtocolEnabled());
+
     // Version check
     connect(protocol, &MAVLinkProtocol::versionCheckChanged, m_ui->versionCheckBox, &QCheckBox::setChecked);
     connect(m_ui->versionCheckBox, &QCheckBox::toggled, protocol, &MAVLinkProtocol::enableVersionCheck);
@@ -90,6 +92,9 @@ MAVLinkSettingsWidget::MAVLinkSettingsWidget(MAVLinkProtocol* protocol, QWidget 
     connect(m_ui->droneOSCheckBox, &QCheckBox::toggled, this, &MAVLinkSettingsWidget::enableDroneOS);
     connect(protocol, &MAVLinkProtocol::authKeyChanged, m_ui->droneOSLineEdit, &QLineEdit::setText);
     connect(m_ui->droneOSLineEdit, &QLineEdit::textChanged, this, &MAVLinkSettingsWidget::setDroneOSKey);
+    // simple waypoint protocol
+    connect(protocol, &MAVLinkProtocol::simpleWaypointProtocolChanged, m_ui->simpleWaypointCheckBox, &QCheckBox::setChecked);
+    connect(m_ui->simpleWaypointCheckBox, &QCheckBox::toggled, protocol, &MAVLinkProtocol::enableSimpleWaypointProtocol);
 
     // Drone OS
     connect(m_ui->droneOSComboBox, static_cast<void (QComboBox::*)(const QString&)>(&QComboBox::currentIndexChanged), this, &MAVLinkSettingsWidget::setDroneOSHost);

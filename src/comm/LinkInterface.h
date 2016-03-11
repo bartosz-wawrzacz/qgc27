@@ -38,6 +38,7 @@ along with PIXHAWK. If not, see <http://www.gnu.org/licenses/>.
 #include <QMutexLocker>
 #include <QMetaType>
 #include <QSharedPointer>
+#include <QDebug>
 
 #include "QGCMAVLink.h"
 
@@ -61,7 +62,7 @@ public:
 
     // Property accessors
     bool active(void)                       { return _active; }
-    void setActive(bool active)             { _active = active; emit activeChanged(active); }
+    void setActive(bool active)             { _active = active; emit activeChanged(active); qDebug() << ">>>>ACTIVE " << active; }
 
     /**
      * @brief Get link configuration (if used)

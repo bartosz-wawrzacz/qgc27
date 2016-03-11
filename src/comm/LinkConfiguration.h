@@ -25,6 +25,7 @@ This file is part of the QGROUNDCONTROL project
 #define LINKCONFIGURATION_H
 
 #include <QSettings>
+#include "SatcomSettings.h"
 
 class LinkInterface;
 
@@ -38,23 +39,26 @@ class LinkConfiguration : public QObject
 public:
     LinkConfiguration(const QString& name);
     LinkConfiguration(LinkConfiguration* copy);
-    virtual ~LinkConfiguration() {}
+    virtual ~LinkConfiguration() { delete _satcomSettings; }
 
-    Q_PROPERTY(QString          name                READ name           WRITE setName           NOTIFY nameChanged)
-    Q_PROPERTY(LinkInterface*   link                READ link           WRITE setLink           NOTIFY linkChanged)
-    Q_PROPERTY(LinkType         linkType            READ type                                   CONSTANT)
-    Q_PROPERTY(bool             dynamic             READ isDynamic      WRITE setDynamic        NOTIFY dynamicChanged)
-    Q_PROPERTY(bool             autoConnect         READ isAutoConnect  WRITE setAutoConnect    NOTIFY autoConnectChanged)
-    Q_PROPERTY(bool             autoConnectAllowed  READ isAutoConnectAllowed                   CONSTANT)
-    Q_PROPERTY(QString          settingsURL         READ settingsURL                            CONSTANT)
+    Q_PROPERTY(QString          name                READ name               WRITE setName               NOTIFY nameChanged)
+    Q_PROPERTY(LinkInterface*   link                READ link               WRITE setLink               NOTIFY linkChanged)
+    Q_PROPERTY(LinkType         linkType            READ type                                           CONSTANT)
+    Q_PROPERTY(bool             dynamic             READ isDynamic          WRITE setDynamic            NOTIFY dynamicChanged)
+    Q_PROPERTY(bool             autoConnect         READ isAutoConnect      WRITE setAutoConnect        NOTIFY autoConnectChanged)
+    Q_PROPERTY(bool             autoConnectAllowed  READ isAutoConnectAllowed                           CONSTANT)
+    Q_PROPERTY(QString          settingsURL         READ settingsURL                                    CONSTANT)
+    Q_PROPERTY(SatcomSettings*  satcomSettings      READ satcomSettings                                 NOTIFY satcomSettingsChanged)
 
     // Property accessors
 
     const QString   name(void)  { return _name; }
     LinkInterface*  link(void)  { return _link; }
+    SatcomSettings* satcomSettings(void) { return _satcomSettings; }
 
     void            setName(const QString name);
     void            setLink(LinkInterface* link);
+    //void            setSatcomSettings(SatcomSettings* satcomSettings);
 
     ///  The link types supported by QGC
     ///  Any changes here MUST be reflected in LinkManager::linkTypeStrings()
@@ -105,6 +109,10 @@ public:
      * Set if this is this an Auto Connect configuration.
     */
     void setAutoConnect(bool autoc = true) { _autoConnect = autoc; emit autoConnectChanged(); }
+
+    void loadSatcomSettings(QSettings& settings, const QString& root);
+
+    void saveSatcomSettings(QSettings& settings, const QString& root);
 
     /// Virtual Methods
 
@@ -190,17 +198,19 @@ public:
     static LinkConfiguration* duplicateSettings(LinkConfiguration *source);
 
 signals:
-    void nameChanged        (const QString& name);
-    void linkChanged        (LinkInterface* link);
-    void dynamicChanged     ();
-    void autoConnectChanged ();
+    void nameChanged            (const QString& name);
+    void linkChanged            (LinkInterface* link);
+    void dynamicChanged         ();
+    void autoConnectChanged     ();
+    void satcomSettingsChanged  (SatcomSettings* satcomSettings);
 
 protected:
-    LinkInterface* _link; ///< Link currently using this configuration (if any)
+    LinkInterface*  _link;          ///< Link currently using this configuration (if any)
 private:
-    QString _name;
-    bool    _dynamic;       ///< A connection added automatically and not persistent (unless it's edited).
-    bool    _autoConnect;   ///< This connection is started automatically at boot
+    QString         _name;
+    bool            _dynamic;       ///< A connection added automatically and not persistent (unless it's edited).
+    bool            _autoConnect;   ///< This connection is started automatically at boot
+    SatcomSettings*  _satcomSettings;
 };
 
 #endif // LINKCONFIGURATION_H

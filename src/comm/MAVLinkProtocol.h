@@ -113,6 +113,11 @@ public:
     int getActionRetransmissionTimeout() {
         return m_actionRetransmissionTimeout;
     }
+    /** @brief Check if the simple waypoint protocol is used */
+    bool isSimpleWaypointProtocolEnabled() {
+        return m_simpleWaypointProtocolEnabled;
+    }
+
     /**
      * Retrieve a total of all successfully parsed packets for the specified link.
      * @returns -1 if this is not available for this protocol, # of packets otherwise.
@@ -170,6 +175,9 @@ public slots:
     /** @brief Set parameter read timeout */
     void setActionRetransmissionTimeout(int ms);
 
+    /** @brief Enable / disable the simple waypoint protocol */
+    void enableSimpleWaypointProtocol(bool enabled);
+
     /** @brief Enable / disable version check */
     void enableVersionCheck(bool enabled);
 
@@ -204,6 +212,7 @@ protected:
     bool m_paramGuardEnabled;       ///< Parameter retransmission/rewrite enabled
     bool m_actionGuardEnabled;       ///< Action request retransmission enabled
     int m_actionRetransmissionTimeout; ///< Timeout for parameter retransmission
+    bool m_simpleWaypointProtocolEnabled; ///< Enable the simple waypoint protocol
     QMutex receiveMutex;        ///< Mutex to protect receiveBytes function
     int lastIndex[256][256];    ///< Store the last received sequence ID for each system/componenet pair
     int totalReceiveCounter[MAVLINK_COMM_NUM_BUFFERS];    ///< The total number of successfully received messages
@@ -236,6 +245,8 @@ signals:
     void paramGuardChanged(bool enabled);
     /** @brief Emitted if param read timeout changed */
     void paramRetransmissionTimeoutChanged(int ms);
+    /** @brief Emitted if the simple waypoint protocol is enabled / disabled */
+    void simpleWaypointProtocolChanged(bool enabled);
     /** @brief Emitted if param write timeout changed */
     void paramRewriteTimeoutChanged(int ms);
     /** @brief Emitted if action guard status changed */

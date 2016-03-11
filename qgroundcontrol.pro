@@ -62,6 +62,8 @@ LinuxBuild {
 
 # Qt configuration
 
+QMAKE_CXX=ccache g++
+
 CONFIG += qt \
     thread \
     c++11
@@ -287,7 +289,8 @@ HEADERS += \
     src/AutoPilotPlugins/PX4/PX4AirframeLoader.h \
     src/AutoPilotPlugins/APM/APMAirframeLoader.h \
     src/QmlControls/QGCImageProvider.h \
-    src/AutoPilotPlugins/APM/APMRemoteParamsDownloader.h
+    src/AutoPilotPlugins/APM/APMRemoteParamsDownloader.h \
+    src/comm/SatcomSettings.h
 
 DebugBuild {
 HEADERS += \
@@ -410,7 +413,8 @@ SOURCES += \
     src/AutoPilotPlugins/PX4/PX4AirframeLoader.cc \
     src/AutoPilotPlugins/APM/APMAirframeLoader.cc \
     src/QmlControls/QGCImageProvider.cc \
-    src/AutoPilotPlugins/APM/APMRemoteParamsDownloader.cc
+    src/AutoPilotPlugins/APM/APMRemoteParamsDownloader.cc \
+    src/comm/SatcomSettings.cc
 
 DebugBuild {
 SOURCES += \

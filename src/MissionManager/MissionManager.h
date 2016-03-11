@@ -45,7 +45,7 @@ class MissionManager : public QObject
     
 public:
     /// @param uas Uas which this set of facts is associated with
-    MissionManager(Vehicle* vehicle);
+    MissionManager(Vehicle* vehicle, bool useSimpleWaypointProtocol);
     ~MissionManager();
     
     Q_PROPERTY(bool                 inProgress      READ inProgress     NOTIFY inProgressChanged)
@@ -83,8 +83,9 @@ public:
     } ErrorCode_t;
 
     // These values are public so the unit test can set appropriate signal wait times
-    static const int _ackTimeoutMilliseconds= 2000;
+    static const int _ackTimeoutMilliseconds = 2000;
     static const int _maxRetryCount = 5;
+    static const int _simpleProtocolSendIntervalMs = 500;
     
 signals:
     void newMissionItemsAvailable(void);
@@ -95,6 +96,7 @@ signals:
 private slots:
     void _mavlinkMessageReceived(const mavlink_message_t& message);
     void _ackTimeout(void);
+    void _simpleProtocolSendCallback(void);
     
 private:
     typedef enum {
@@ -124,6 +126,7 @@ private:
     LinkInterface*      _dedicatedLink;
     
     QTimer*             _ackTimeoutTimer;
+    QTimer*             _simpleProtocolSendTimer;
     AckType_t           _retryAck;
     int                 _requestItemRetryCount;
     
@@ -136,6 +139,8 @@ private:
     
     QmlObjectListModel  _missionItems;
     int                 _currentMissionItem;
+
+    bool _simpleWaypointProtocolEnabled;
 };
 
 #endif

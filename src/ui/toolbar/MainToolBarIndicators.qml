@@ -266,6 +266,39 @@ Row {
     }
 
     //-------------------------------------------------------------------------
+    //-- Satcom Indicator
+    Item {
+        id:         satcom
+        width:      satcomIcon.width
+        height:     mainWindow.tbCellHeight
+        visible:    true
+        Image {
+            id:             satcomIcon
+            source:         "/qmlimages/SatPlane.svg"
+            fillMode:       Image.PreserveAspectFit
+            mipmap:         true
+            smooth:         true
+            height:         mainWindow.tbCellHeight * 0.5
+            width:          height * 1.5
+//            visible:        false
+            anchors.verticalCenter: parent.verticalCenter
+        }
+//        ColorOverlay {
+//            id:             satcomOverlay
+//            anchors.fill:   satcomIcon
+//            source:         satcomIcon
+//            color:          "#b75711"
+//        }
+        MouseArea {
+            anchors.fill:   parent
+            onClicked: {
+                var centerX = mapToItem(toolBar, x, y).x + (width / 2)
+                mainWindow.showPopUp(satcomInfo, centerX)
+            }
+        }
+    }
+
+    //-------------------------------------------------------------------------
     //-- Battery Indicator
     Item {
         id: batteryStatus
