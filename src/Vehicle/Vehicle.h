@@ -234,6 +234,8 @@ public:
     Q_INVOKABLE void virtualTabletJoystickValue(double roll, double pitch, double yaw, double thrust);
     Q_INVOKABLE void disconnectInactiveVehicle(void);
 
+    Q_INVOKABLE void debugShit();
+
     // Property accessors
 
     QGeoCoordinate coordinate(void) { return _coordinate; }
@@ -522,8 +524,8 @@ private:
     // Lost connection handling
     bool                _connectionLost;
     bool                _connectionLostEnabled;
-    static const int    _connectionLostTimeoutMSecs = 3500;  // Signal connection lost after 3.5 seconds of missed heartbeat
-    QTimer              _connectionLostTimer;
+//    static const int    _connectionLostTimeoutMSecs = 3500;  // Signal connection lost after 3.5 seconds of missed heartbeat
+//    QTimer              _connectionLostTimer;
 
     bool                _usingSatcomLink;
 

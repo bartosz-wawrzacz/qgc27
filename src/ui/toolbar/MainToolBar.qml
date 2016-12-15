@@ -515,7 +515,7 @@ Rectangle {
                 y = pos.y + ScreenTools.defaultFontPixelHeight
             }
         }
-    }
+    }    
 
     //---------------------------------------------
     // Toolbar Row

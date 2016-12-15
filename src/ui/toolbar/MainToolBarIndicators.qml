@@ -271,29 +271,47 @@ Row {
         id:         satcom
         width:      satcomIcon.width
         height:     mainWindow.tbCellHeight
-        visible:    true
+        visible:    activeVehicle.usingSatcomLink
         Image {
             id:             satcomIcon
             source:         "/qmlimages/SatPlane.svg"
             fillMode:       Image.PreserveAspectFit
             mipmap:         true
             smooth:         true
-            height:         mainWindow.tbCellHeight * 0.5
+            height:         parent.height * 0.5
             width:          height * 1.5
-//            visible:        false
             anchors.verticalCenter: parent.verticalCenter
         }
-//        ColorOverlay {
-//            id:             satcomOverlay
-//            anchors.fill:   satcomIcon
-//            source:         satcomIcon
-//            color:          "#b75711"
-//        }
         MouseArea {
             anchors.fill:   parent
             onClicked: {
                 var centerX = mapToItem(toolBar, x, y).x + (width / 2)
                 mainWindow.showPopUp(satcomInfo, centerX)
+            }
+        }
+    }
+
+    //-------------------------------------------------------------------------
+    //-- Debug Shit
+    Item {
+        id:         debugShit
+        width:      debugShitIcon.width
+        height:     mainWindow.tbCellHeight
+        visible:    true
+        Image {
+            id:             debugShitIcon
+            source:         "/qmlimages/Gears.svg"
+            fillMode:       Image.PreserveAspectFit
+            mipmap:         true
+            smooth:         true
+            height:         mainWindow.tbCellHeight * 0.5
+            width:          height * 1.5
+            anchors.verticalCenter: parent.verticalCenter
+        }
+        MouseArea {
+            anchors.fill:   parent
+            onClicked: {
+                activeVehicle.debugShit();
             }
         }
     }

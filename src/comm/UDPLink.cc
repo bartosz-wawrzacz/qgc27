@@ -330,6 +330,7 @@ bool UDPLink::_hardwareConnect()
         if(!UDP_BROKEN_SIGNAL) {
             QObject::connect(_socket, &QUdpSocket::readyRead, this, &UDPLink::readBytes);
         }
+        qDebug() << ">>>>>> UDP CONNECTED";
         emit connected();
     } else {
         emit communicationError("UDP Link Error", "Error binding UDP port");

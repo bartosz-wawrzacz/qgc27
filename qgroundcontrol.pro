@@ -289,8 +289,7 @@ HEADERS += \
     src/AutoPilotPlugins/PX4/PX4AirframeLoader.h \
     src/AutoPilotPlugins/APM/APMAirframeLoader.h \
     src/QmlControls/QGCImageProvider.h \
-    src/AutoPilotPlugins/APM/APMRemoteParamsDownloader.h \
-    src/comm/SatcomSettings.h
+    src/AutoPilotPlugins/APM/APMRemoteParamsDownloader.h
 
 DebugBuild {
 HEADERS += \
@@ -414,7 +413,7 @@ SOURCES += \
     src/AutoPilotPlugins/APM/APMAirframeLoader.cc \
     src/QmlControls/QGCImageProvider.cc \
     src/AutoPilotPlugins/APM/APMRemoteParamsDownloader.cc \
-    src/comm/SatcomSettings.cc
+    src/comm/LinkInterface.cc
 
 DebugBuild {
 SOURCES += \

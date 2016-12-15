@@ -355,7 +355,7 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
             // And update the last sequence number for this system/component pair
             lastIndex[message.sysid][message.compid] = expectedSeq;
 
-            // Update on every 32th packet
+            // Update on every 32nd packet
             if ((totalReceiveCounter[mavlinkChannel] & 0x1F) == 0)
             {
                 // Calculate new loss ratio
@@ -383,6 +383,10 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
                     // not the link the message was received on
                     if (currLink && currLink != link) _sendMessage(currLink, message, message.sysid, message.compid);
                 }
+            }
+
+            if(message.msgid != MAVLINK_MSG_ID_RADIO_STATUS) {
+                //link->updateLastRxTime();
             }
         }
     }

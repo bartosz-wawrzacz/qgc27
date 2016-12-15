@@ -50,30 +50,27 @@ LinkConfiguration::LinkConfiguration(const QString& name)
     , _name(name)
     , _dynamic(false)
     , _autoConnect(false)
+    , _usingSatcom(false)
 {
     _name = name;
     if (_name.isEmpty()) {
         qWarning() << "Internal error";
     }
-
-    _satcomSettings = new SatcomSettings();
 }
 
 LinkConfiguration::LinkConfiguration(LinkConfiguration* copy)
 {
-    _satcomSettings = new SatcomSettings();
     LinkConfiguration::copyFrom(copy);
 }
 
 void LinkConfiguration::copyFrom(LinkConfiguration* source)
 {
     Q_ASSERT(source != NULL);
-    _link           = source->link();
-    _name           = source->name();
-    _dynamic        = source->isDynamic();
-    _autoConnect    = source->isAutoConnect();
-    delete _satcomSettings;
-    _satcomSettings = new SatcomSettings(source->satcomSettings());
+    _link               = source->link();
+    _name               = source->name();
+    _dynamic            = source->isDynamic();
+    _autoConnect        = source->isAutoConnect();
+    _usingSatcom        = source->usingSatcom();
     Q_ASSERT(!_name.isEmpty());
 }
 
@@ -177,8 +174,8 @@ void LinkConfiguration::setLink(LinkInterface* link)
     emit linkChanged(link);
 }
 
-//void LinkConfiguration::setSatcomSettings(SatcomSettings* satcomSettings)
-//{
-//    _satcomSettings = satcomSettings;
-//    emit satcomSettingsChanged(satcomSettings);
-//}
+void LinkConfiguration::setUsingSatcom(bool usingSatcom)
+{
+    _usingSatcom = usingSatcom;
+    emit usingSatcomChanged(usingSatcom);
+}

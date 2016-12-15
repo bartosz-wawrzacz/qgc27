@@ -173,7 +173,6 @@ Rectangle {
         visible:        false
         property var linkConfig: null
         property var editConfig: null
-        property var satcomS: null
     }
 
     //---------------------------------------------
@@ -187,7 +186,6 @@ Rectangle {
                 // If editing, create copy for editing
                 if(linkConfig) {
                     editConfig = QGroundControl.linkManager.startConfigurationEditing(linkConfig)
-                    satcomS = editConfig.satcomSettings
                 } else {
                     // Create new link configuration
                     if(ScreenTools.isiOS)
@@ -326,29 +324,15 @@ Rectangle {
                         enabled:    true
                         onCheckedChanged: {
                             if(editConfig) {
-                                satcomS.usingSatcom = checked
+                                editConfig.usingSatcom = checked
                             }
                         }
                         Component.onCompleted: {
                             if(editConfig)
-                                checked = satcomS.usingSatcom
+                                checked = editConfig.usingSatcom
                         }
                     }
-                    Row {
-                        spacing:    ScreenTools.defaultFontPixelWidth
-                        visible:    satcomCheckBox.checked
-                        QGCLabel {
-                            text:   "Twoja stara to:"
-                            width:  _firstColumn
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        QGCTextField {
-                            id:     linkVehicleId
-                            text:   "penis węża"
-                            width:  _secondColumn
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
+
                     Item {
                         height: ScreenTools.defaultFontPixelHeight
                         width:  parent.width

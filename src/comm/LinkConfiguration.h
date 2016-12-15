@@ -25,7 +25,7 @@ This file is part of the QGROUNDCONTROL project
 #define LINKCONFIGURATION_H
 
 #include <QSettings>
-#include "SatcomSettings.h"
+#include "QGCMAVLink.h"
 
 class LinkInterface;
 
@@ -39,7 +39,7 @@ class LinkConfiguration : public QObject
 public:
     LinkConfiguration(const QString& name);
     LinkConfiguration(LinkConfiguration* copy);
-    virtual ~LinkConfiguration() { delete _satcomSettings; }
+    virtual ~LinkConfiguration() { }
 
     Q_PROPERTY(QString          name                READ name               WRITE setName               NOTIFY nameChanged)
     Q_PROPERTY(LinkInterface*   link                READ link               WRITE setLink               NOTIFY linkChanged)
@@ -48,17 +48,19 @@ public:
     Q_PROPERTY(bool             autoConnect         READ isAutoConnect      WRITE setAutoConnect        NOTIFY autoConnectChanged)
     Q_PROPERTY(bool             autoConnectAllowed  READ isAutoConnectAllowed                           CONSTANT)
     Q_PROPERTY(QString          settingsURL         READ settingsURL                                    CONSTANT)
-    Q_PROPERTY(SatcomSettings*  satcomSettings      READ satcomSettings                                 NOTIFY satcomSettingsChanged)
+    Q_PROPERTY(bool             usingSatcom         READ usingSatcom        WRITE setUsingSatcom        NOTIFY usingSatcomChanged)
 
     // Property accessors
 
     const QString   name(void)  { return _name; }
     LinkInterface*  link(void)  { return _link; }
-    SatcomSettings* satcomSettings(void) { return _satcomSettings; }
 
-    void            setName(const QString name);
-    void            setLink(LinkInterface* link);
-    //void            setSatcomSettings(SatcomSettings* satcomSettings);
+    bool    usingSatcom(void)       { return _usingSatcom; }
+
+    void setName(const QString name);
+    void setLink(LinkInterface* link);
+
+    void setUsingSatcom(bool usingSatcom);
 
     ///  The link types supported by QGC
     ///  Any changes here MUST be reflected in LinkManager::linkTypeStrings()
@@ -198,11 +200,11 @@ public:
     static LinkConfiguration* duplicateSettings(LinkConfiguration *source);
 
 signals:
-    void nameChanged            (const QString& name);
-    void linkChanged            (LinkInterface* link);
-    void dynamicChanged         ();
-    void autoConnectChanged     ();
-    void satcomSettingsChanged  (SatcomSettings* satcomSettings);
+    void nameChanged                (const QString& name);
+    void linkChanged                (LinkInterface* link);
+    void dynamicChanged             ();
+    void autoConnectChanged         ();
+    void usingSatcomChanged         (bool usingSatcom);
 
 protected:
     LinkInterface*  _link;          ///< Link currently using this configuration (if any)
@@ -210,7 +212,7 @@ private:
     QString         _name;
     bool            _dynamic;       ///< A connection added automatically and not persistent (unless it's edited).
     bool            _autoConnect;   ///< This connection is started automatically at boot
-    SatcomSettings*  _satcomSettings;
+    bool            _usingSatcom;
 };
 
 #endif // LINKCONFIGURATION_H

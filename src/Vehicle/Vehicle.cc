@@ -150,9 +150,9 @@ Vehicle::Vehicle(LinkInterface*             link,
 
     _mavlink = qgcApp()->toolbox()->mavlinkProtocol();
 
-    connect(_mavlink, &MAVLinkProtocol::messageReceived,     this, &Vehicle::_mavlinkMessageReceived);
-    connect(this, &Vehicle::_sendMessageOnThread, this, &Vehicle::_sendMessage, Qt::QueuedConnection);
-    connect(this, &Vehicle::_sendMessageOnLinkOnThread, this, &Vehicle::_sendMessageOnLink, Qt::QueuedConnection);
+    connect(_mavlink,   &MAVLinkProtocol::messageReceived,      this, &Vehicle::_mavlinkMessageReceived);
+    connect(this,       &Vehicle::_sendMessageOnThread,         this, &Vehicle::_sendMessage, Qt::QueuedConnection);
+    connect(this,       &Vehicle::_sendMessageOnLinkOnThread,   this, &Vehicle::_sendMessageOnLink, Qt::QueuedConnection);
 
     _uas = new UAS(_mavlink, this, _firmwarePluginManager);
 
@@ -175,11 +175,16 @@ Vehicle::Vehicle(LinkInterface*             link,
     _refreshTimer->setInterval(UPDATE_TIMER);
     _refreshTimer->start(UPDATE_TIMER);
 
-    // Connection Lost time
-    _connectionLostTimer.setInterval(Vehicle::_connectionLostTimeoutMSecs);
-    _connectionLostTimer.setSingleShot(false);
-    _connectionLostTimer.start();
-    connect(&_connectionLostTimer, &QTimer::timeout, this, &Vehicle::_connectionLostTimeout);
+//    // Connection Lost time
+//    _connectionLostTimer.setInterval(Vehicle::_connectionLostTimeoutMSecs);
+//    _connectionLostTimer.setSingleShot(false);
+//    _connectionLostTimer.start();
+//    connect(&_connectionLostTimer, &QTimer::timeout, this, &Vehicle::_connectionLostTimeout);
+
+//    _linkActiveCheckTimer.setInterval(1000);
+//    _linkActiveCheckTimer.setSingleShot(false);
+//    connect(&_linkActiveCheckTimer, &QTimer::timeout, this, &LinkManager::_linkActiveCheck);
+//    _linkActiveCheckTimer.start();
 
     _mav = uas();
 
@@ -194,7 +199,7 @@ Vehicle::Vehicle(LinkInterface*             link,
     connect(_mav, &UASInterface::speedChanged, this, &Vehicle::_updateSpeed);
     connect(_mav, &UASInterface::altitudeChanged, this, &Vehicle::_updateAltitude);
     connect(_mav, &UASInterface::navigationControllerErrorsChanged,this, &Vehicle::_updateNavigationControllerErrors);
-    connect(_mav, &UASInterface::NavigationControllerDataChanged,   this, &Vehicle::_updateNavigationControllerData);
+    connect(_mav, &UASInterface::navigationControllerDataChanged,   this, &Vehicle::_updateNavigationControllerData);
 
     _loadSettings();
 
@@ -542,6 +547,10 @@ void Vehicle::_addLink(LinkInterface* link)
         qCDebug(VehicleLog) << "_addLink:" << QString("%1").arg((ulong)link, 0, 16);
         connect(qgcApp()->toolbox()->linkManager(), &LinkManager::linkInactive, this, &Vehicle::_linkInactiveOrDeleted);
         connect(qgcApp()->toolbox()->linkManager(), &LinkManager::linkDeleted, this, &Vehicle::_linkInactiveOrDeleted);
+
+        if(link->getLinkConfiguration()->usingSatcom()) {
+            setUsingSatcomLink(true);
+        }
     }
 }
 
@@ -603,7 +612,7 @@ void Vehicle::_sendMessage(mavlink_message_t message)
     foreach (LinkInterface* link, _links) {
         if (link->isConnected()) {
             // Never send the heartbeat on a high-latency link
-            if(!(message.msgid == MAVLINK_MSG_ID_HEARTBEAT && link->getLinkConfiguration()->satcomSettings()->satcomUsed())) {
+            if(!(message.msgid == MAVLINK_MSG_ID_HEARTBEAT && link->getLinkConfiguration()->usingSatcom())) {
                 _sendMessageOnLink(link, message);
             }
         }
@@ -617,7 +626,6 @@ LinkInterface* Vehicle::priorityLink(void)
 #ifndef __ios__
     foreach (LinkInterface* link, _links) {
         if (link->isConnected()) {
-            qDebug() << link->getName() << " " << link->active();
             SerialLink* pSerialLink = qobject_cast<SerialLink*>(link);
             if (pSerialLink) {
                 LinkConfiguration* pLinkConfig = pSerialLink->getLinkConfiguration();
@@ -626,7 +634,7 @@ LinkInterface* Vehicle::priorityLink(void)
                     if (pSerialConfig && pSerialConfig->usbDirect()) {
                         return link;
                     }
-                    if (lowLatencyLink == NULL && !pLinkConfig->satcomSettings()->satcomUsed()) {
+                    if (lowLatencyLink == NULL && !pLinkConfig->usingSatcom()) {
                         lowLatencyLink = link;
                     }
                 }
@@ -1176,6 +1184,10 @@ void Vehicle::setUsingSatcomLink(bool usingSatcomLink)
 {
     if(_usingSatcomLink != usingSatcomLink) {
         _usingSatcomLink = usingSatcomLink;
+        if(usingSatcomLink) {
+            // don't report connection loss when using satcom - there is no heartbeat and the interval between messages is high
+            setConnectionLostEnabled(false);
+        }
         emit usingSatcomLinkChanged(_usingSatcomLink);
     }
 }
@@ -1203,12 +1215,12 @@ void Vehicle::_connectionLostTimeout(void)
 
 void Vehicle::_connectionActive(void)
 {
-    _connectionLostTimer.start();
-    if (_connectionLost) {
-        _connectionLost = false;
-        emit connectionLostChanged(false);
-        _say(QString("connection regained to vehicle %1").arg(id()), GAudioOutput::AUDIO_SEVERITY_NOTICE);
-    }
+//    _connectionLostTimer.start();
+//    if (_connectionLost) {
+//        _connectionLost = false;
+//        emit connectionLostChanged(false);
+//        _say(QString("connection regained to vehicle %1").arg(id()), GAudioOutput::AUDIO_SEVERITY_NOTICE);
+//    }
 }
 
 void Vehicle::_say(const QString& text, int severity)
@@ -1338,4 +1350,15 @@ VehicleBatteryFactGroup::VehicleBatteryFactGroup(QObject* parent)
 void VehicleBatteryFactGroup::setVehicle(Vehicle* vehicle)
 {
     _vehicle = vehicle;
+}
+
+void Vehicle::debugShit()
+{
+    qDebug() << ">>> idź w tany kurtyzano";
+
+    foreach(LinkInterface* link, _links){
+        qDebug() << link->getName() << link->active() << (float)(link->timeSinceRxMs())/1000.0f << link->_linkActiveTimer.remainingTime();
+    }
+
+    qDebug() << ">>> do budy";
 }

@@ -88,9 +88,9 @@ LinkManager::LinkManager(QGCApplication* app)
     _autoconnect3DRRadio =  settings.value(_autoconnect3DRRadioKey, true).toBool();
     _autoconnectPX4Flow =   settings.value(_autoconnectPX4FlowKey, true).toBool();
 
-    _activeLinkCheckTimer.setInterval(_activeLinkCheckTimeoutMSecs);
-    _activeLinkCheckTimer.setSingleShot(false);
-    connect(&_activeLinkCheckTimer, &QTimer::timeout, this, &LinkManager::_activeLinkCheck);
+    _linkFunctionalCheckTimer.setInterval(_linkFunctionalCheckTimeoutMSecs);
+    _linkFunctionalCheckTimer.setSingleShot(false);
+    connect(&_linkFunctionalCheckTimer, &QTimer::timeout, this, &LinkManager::_linkFunctionalCheck);
 }
 
 LinkManager::~LinkManager()
@@ -103,6 +103,7 @@ void LinkManager::setToolbox(QGCToolbox *toolbox)
    QGCTool::setToolbox(toolbox);
 
    _mavlinkProtocol = _toolbox->mavlinkProtocol();
+   connect(_mavlinkProtocol, &MAVLinkProtocol::vehicleHeartbeatInfo, this, &LinkManager::_linkReceivedHeartbeat);
 
     connect(&_portListTimer, &QTimer::timeout, this, &LinkManager::_updateAutoConnectLinks);
     _portListTimer.start(_autoconnectUpdateTimerMSecs); // timeout must be long enough to get past bootloader on second pass
@@ -121,9 +122,9 @@ LinkInterface* LinkManager::createConnectedLink(LinkConfiguration* config)
             if (serialConfig) {
                 pLink = new SerialLink(serialConfig);
                 if (serialConfig->usbDirect()) {
-                    _activeLinkCheckList.append(pLink);
-                    if (!_activeLinkCheckTimer.isActive()) {
-                        _activeLinkCheckTimer.start();
+                    _linkFunctionalCheckList.append(pLink);
+                    if (!_linkFunctionalCheckTimer.isActive()) {
+                        _linkFunctionalCheckTimer.start();
                     }
                 }
             }
@@ -155,6 +156,7 @@ LinkInterface* LinkManager::createConnectedLink(LinkConfiguration* config)
         default:
             break;
     }
+
     if(pLink) {
         _addLink(pLink);
         connectLink(pLink);
@@ -175,8 +177,10 @@ LinkInterface* LinkManager::createConnectedLink(const QString& name)
 
 void LinkManager::_addLink(LinkInterface* link)
 {
+    qDebug() << ">>>>>>>>>>>>>> ADDING LINK" << link->getName();
+
     if (thread() != QThread::currentThread()) {
-        qWarning() << "_deleteLink called from incorrect thread";
+        qWarning() << "_addLink called from incorrect thread";
         return;
     }
 
@@ -206,13 +210,15 @@ void LinkManager::_addLink(LinkInterface* link)
         emit newLink(link);
     }
 
-    connect(link, &LinkInterface::communicationError,   _app,               &QGCApplication::criticalMessageBoxOnMainThread);
-    connect(link, &LinkInterface::bytesReceived,        _mavlinkProtocol,   &MAVLinkProtocol::receiveBytes);
+    connect(link,   &LinkInterface::communicationError,     _app,               &QGCApplication::criticalMessageBoxOnMainThread);
+    connect(link,   &LinkInterface::bytesReceived,          _mavlinkProtocol,   &MAVLinkProtocol::receiveBytes);
 
     _mavlinkProtocol->resetMetadataForLink(link);
 
-    connect(link, &LinkInterface::connected,    this, &LinkManager::_linkConnected);
-    connect(link, &LinkInterface::disconnected, this, &LinkManager::_linkDisconnected);
+    connect(link,   &LinkInterface::connected,      this,   &LinkManager::_linkConnected);
+    connect(link,   &LinkInterface::disconnected,   this,   &LinkManager::_linkDisconnected);
+
+    qDebug() << "added";
 }
 
 void LinkManager::disconnectAll(void)
@@ -294,6 +300,16 @@ void LinkManager::setConnectionsSuspended(QString reason)
 
 void LinkManager::_linkConnected(void)
 {
+    LinkInterface* link = (LinkInterface*)QObject::sender();
+
+    qDebug() << ">>>>>>>>> linkmanager: " << link->getName() << "CONNECTED";
+
+    if(link != NULL && link->getLinkConfiguration()->usingSatcom()) {
+        // send a heartbeat over satcom, UAS will respond with it's heartbeat to configure QGC
+        qDebug() << "send HB";
+        _sendHeartbeatOnLink(link);
+    }
+
     emit linkConnected((LinkInterface*)sender());
 }
 
@@ -322,7 +338,7 @@ void LinkManager::saveLinkConfigurationList()
                 settings.setValue(root + "/name", linkConfig->name());
                 settings.setValue(root + "/type", linkConfig->type());
                 settings.setValue(root + "/auto", linkConfig->isAutoConnect());
-                //settings.setValue(root + "/highLatency", linkConfig->isUsingSatcom());
+                settings.setValue(root + "/usingSatcom", linkConfig->usingSatcom());
                 // Have the instance save its own values
                 linkConfig->saveSettings(settings, root);
             }
@@ -357,7 +373,7 @@ void LinkManager::loadLinkConfigurationList()
                         if(!name.isEmpty()) {
                             LinkConfiguration* pLink = NULL;
                             bool autoConnect = settings.value(root + "/auto").toBool();
-                            //bool highLatency = settings.value(root + "/highLatency").toBool();
+                            bool usingSatcom = settings.value(root + "/usingSatcom").toBool();
                             switch((LinkConfiguration::LinkType)type) {
 #ifndef __ios__
                                 case LinkConfiguration::TypeSerial:
@@ -393,7 +409,7 @@ void LinkManager::loadLinkConfigurationList()
                             if(pLink) {
                                 //-- Have the instance load its own values
                                 pLink->setAutoConnect(autoConnect);
-                                //pLink->setUsingSatcom(highLatency);
+                                pLink->setUsingSatcom(usingSatcom);
                                 pLink->loadSettings(settings, root);
                                 _linkConfigurations.append(pLink);
                                 linksChanged = true;
@@ -843,12 +859,12 @@ bool LinkManager::isBluetoothAvailable(void)
     return qgcApp()->isBluetoothAvailable();
 }
 
-void LinkManager::_activeLinkCheck(void)
+void LinkManager::_linkFunctionalCheck(void)
 {
     bool found = false;
 
-    if (_activeLinkCheckList.count() != 0) {
-        LinkInterface* link = _activeLinkCheckList.takeFirst();
+    if (_linkFunctionalCheckList.count() != 0) {
+        LinkInterface* link = _linkFunctionalCheckList.takeFirst();
         if (_links.contains(link) && link->isConnected()) {
             // Make sure there is a vehicle on the link
             QmlObjectListModel* vehicles = _toolbox->multiVehicleManager()->vehicles();
@@ -862,11 +878,44 @@ void LinkManager::_activeLinkCheck(void)
         }
     }
 
-    if (_activeLinkCheckList.count() == 0) {
-        _activeLinkCheckTimer.stop();
+    if (_linkFunctionalCheckList.count() == 0) {
+        _linkFunctionalCheckTimer.stop();
     }
 
     if (!found) {
         qgcApp()->showMessage("Your Vehicle is not responding. If this continues please check that you have an SD Card inserted and try again.");
     }
+}
+
+void LinkManager::_linkActiveCheck(void)
+{
+//    for (int i=0; i<_links.count(); i++) {
+//        LinkInterface* link = _links.value<LinkInterface*>(i);
+//        bool active = link->timeSinceRxMs() < _linkActiveCheckTimeoutMSecs;
+//        link->setActive(active);
+
+//    }
+}
+
+void LinkManager::_linkReceivedHeartbeat(LinkInterface *link)
+{
+    link->receivedHeartbeat();
+}
+
+void LinkManager::_sendHeartbeatOnLink(LinkInterface* link)
+{
+    mavlink_message_t message;
+    mavlink_msg_heartbeat_pack(_mavlinkProtocol->getSystemId(),
+                               _mavlinkProtocol->getComponentId(),
+                               &message,
+                               MAV_TYPE_GCS,            // MAV_TYPE
+                               MAV_AUTOPILOT_INVALID,   // MAV_AUTOPILOT
+                               MAV_MODE_MANUAL_ARMED,   // MAV_MODE
+                               0,                       // custom mode
+                               MAV_STATE_ACTIVE);       // MAV_STATE
+
+    uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
+    int len = mavlink_msg_to_send_buffer(buffer, &message);
+    link->writeBytes((const char*)buffer, len);
+    qDebug() << "sent HB";
 }

@@ -39,6 +39,7 @@ along with PIXHAWK. If not, see <http://www.gnu.org/licenses/>.
 #include <QMetaType>
 #include <QSharedPointer>
 #include <QDebug>
+#include <QTimer>
 
 #include "QGCMAVLink.h"
 
@@ -58,11 +59,19 @@ class LinkInterface : public QThread
     friend class LinkManager;
 
 public:
-    Q_PROPERTY(bool active      READ active         WRITE setActive         NOTIFY activeChanged)
+    Q_PROPERTY(bool     active          READ active         WRITE setActive     NOTIFY activeChanged)
+    Q_PROPERTY(quint64  timeSinceRxMs   READ timeSinceRxMs                      NOTIFY timeSinceRxMsChanged)
+//    Q_PROPERTY(quint64  timeSinceTxMs   READ timeSinceTxMs                      NOTIFY timeSinceTxMsChanged)
 
     // Property accessors
     bool active(void)                       { return _active; }
-    void setActive(bool active)             { _active = active; emit activeChanged(active); qDebug() << ">>>>ACTIVE " << active; }
+    void setActive(bool active);
+
+    quint64 timeSinceRxMs(void);
+//    quint64 timeSinceTxMs(void) { return QGC::groundTimeMilliseconds() - _lastTxTime; }
+
+    QTimer                  _linkActiveTimer;                      ///< Timer which checks the _lastRxTime of the link and sets it's active property accordingly
+    static const int        _linkActiveTimeoutMSecs = 3000;        ///< Amount of time to wait for a mavlink packet in a link before marking it as inactive
 
     /**
      * @brief Get link configuration (if used)
@@ -140,6 +149,8 @@ public:
     /// set into the link when it is added to LinkManager
     uint8_t getMavlinkChannel(void) const { Q_ASSERT(_mavlinkChannelSet); return _mavlinkChannel; }
 
+    void receivedHeartbeat(void);
+
     // These are left unimplemented in order to cause linker errors which indicate incorrect usage of
     // connect/disconnect on link directly. All connect/disconnect calls should be made through LinkManager.
     bool connect(void);
@@ -162,6 +173,9 @@ public slots:
 signals:
     void autoconnectChanged(bool autoconnect);
     void activeChanged(bool active);
+    void timeSinceRxMsChanged(void);
+    //void linkActiveTimeout(void);
+//    void timeSinceTxMsChanged(void);
 
     /**
      * @brief New data arrived
@@ -197,24 +211,7 @@ signals:
 
 protected:
     // Links are only created by LinkManager so constructor is not public
-    LinkInterface() :
-        QThread(0)
-        , _mavlinkChannelSet(false)
-        , _active(false)
-        , _enableRateCollection(false)
-    {
-        // Initialize everything for the data rate calculation buffers.
-        _inDataIndex  = 0;
-        _outDataIndex = 0;
-        
-        // Initialize our data rate buffers.
-        memset(_inDataWriteAmounts, 0, sizeof(_inDataWriteAmounts));
-        memset(_inDataWriteTimes,   0, sizeof(_inDataWriteTimes));
-        memset(_outDataWriteAmounts,0, sizeof(_outDataWriteAmounts));
-        memset(_outDataWriteTimes,  0, sizeof(_outDataWriteTimes));
-        
-        qRegisterMetaType<LinkInterface*>("LinkInterface*");
-    }
+    LinkInterface();
 
     /// This function logs the send times and amounts of datas for input. Data is used for calculating
     /// the transmission rate.
@@ -332,6 +329,7 @@ private:
         return dataRate;
     }
 
+
     /**
      * @brief Connect this interface logically
      *
@@ -367,6 +365,13 @@ private:
 
     bool _active;       ///< true: link is actively receiving mavlink messages
     bool _enableRateCollection;
+
+    // stores the time of the last received packet on the link in ms since unix epoch
+    quint64 _lastRxTime;
+//    quint64 _lastTxTime;
+
+private slots:
+    void _linkActiveTimeout(void);
 };
 
 typedef QSharedPointer<LinkInterface> SharedLinkInterface;
