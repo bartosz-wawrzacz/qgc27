@@ -30,6 +30,7 @@
 
 #include "QGCConfig.h"
 
+using namespace std;
 
 /* Windows fixes */
 #ifdef _MSC_VER
